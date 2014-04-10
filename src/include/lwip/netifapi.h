@@ -41,12 +41,6 @@
 extern "C" {
 #endif
 
-#if LWIP_MPU_COMPATIBLE
-#define NETIFAPI_IPADDR_DEF(m)  m
-#else /* LWIP_MPU_COMPATIBLE */
-#define NETIFAPI_IPADDR_DEF(m)  *m
-#endif /* LWIP_MPU_COMPATIBLE */
-
 typedef void (*netifapi_void_fn)(struct netif *netif);
 typedef err_t (*netifapi_errt_fn)(struct netif *netif);
 
@@ -58,9 +52,9 @@ struct netifapi_msg_msg {
   struct netif *netif;
   union {
     struct {
-      ip_addr_t NETIFAPI_IPADDR_DEF(ipaddr);
-      ip_addr_t NETIFAPI_IPADDR_DEF(netmask);
-      ip_addr_t NETIFAPI_IPADDR_DEF(gw);
+      ip_addr_t *ipaddr;
+      ip_addr_t *netmask;
+      ip_addr_t *gw;
       void *state;
       netif_init_fn init;
       netif_input_fn input;
@@ -102,9 +96,6 @@ err_t netifapi_netif_common    ( struct netif *netif,
 #define netifapi_netif_set_default(n) netifapi_netif_common(n, netif_set_default, NULL)
 #define netifapi_dhcp_start(n)        netifapi_netif_common(n, NULL, dhcp_start)
 #define netifapi_dhcp_stop(n)         netifapi_netif_common(n, dhcp_stop, NULL)
-#define netifapi_dhcp_inform(n)       netifapi_netif_common(n, dhcp_inform, NULL)
-#define netifapi_dhcp_renew(n)        netifapi_netif_common(n, NULL, dhcp_renew)
-#define netifapi_dhcp_release(n)      netifapi_netif_common(n, NULL, dhcp_release)
 #define netifapi_autoip_start(n)      netifapi_netif_common(n, NULL, autoip_start)
 #define netifapi_autoip_stop(n)       netifapi_netif_common(n, NULL, autoip_stop)
 

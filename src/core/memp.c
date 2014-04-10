@@ -48,7 +48,6 @@
 #include "lwip/igmp.h"
 #include "lwip/api.h"
 #include "lwip/api_msg.h"
-#include "lwip/sockets.h"
 #include "lwip/tcpip.h"
 #include "lwip/sys.h"
 #include "lwip/timers.h"
@@ -59,9 +58,6 @@
 #include "lwip/snmp_msg.h"
 #include "lwip/dns.h"
 #include "netif/ppp_oe.h"
-#include "lwip/nd6.h"
-#include "lwip/ip6_frag.h"
-#include "lwip/mld6.h"
 
 #include <string.h>
 
@@ -159,7 +155,7 @@ static const char *memp_desc[MEMP_MAX] = {
  *   extern u8_t __attribute__((section(".onchip_mem"))) memp_memory_UDP_PCB_base[];
  */
 #define LWIP_MEMPOOL(name,num,size,desc) u8_t memp_memory_ ## name ## _base \
-  [((num) * (MEMP_SIZE + MEMP_ALIGN_SIZE(size)))];   
+[((num) * (MEMP_SIZE + MEMP_ALIGN_SIZE(size)))];  
 #include "lwip/memp_std.h"
 
 /** This array holds the base of each memory pool. */
@@ -180,20 +176,19 @@ static u8_t memp_memory[MEM_ALIGNMENT - 1
 
 #if MEMP_SANITY_CHECK
 /**
- * Check that memp-lists don't form a circle, using "Floyd's cycle-finding algorithm".
+ * Check that memp-lists don't form a circle
  */
 static int
 memp_sanity(void)
 {
-  s16_t i;
-  struct memp *t, *h;
+  s16_t i, c;
+  struct memp *m, *n;
 
   for (i = 0; i < MEMP_MAX; i++) {
-    t = memp_tab[i];
-    if(t != NULL) {
-      for (h = t->next; (t != NULL) && (h != NULL); t = t->next,
-        h = (((h->next != NULL) && (h->next->next != NULL)) ? h->next->next : NULL)) {
-        if (t == h) {
+    for (m = memp_tab[i]; m != NULL; m = m->next) {
+      c = 1;
+      for (n = memp_tab[i]; n != NULL; n = n->next) {
+        if (n == m && --c < 0) {
           return 0;
         }
       }
@@ -287,25 +282,17 @@ memp_overflow_check_all(void)
   u16_t i, j;
   struct memp *p;
 
-#if !MEMP_SEPARATE_POOLS
   p = (struct memp *)LWIP_MEM_ALIGN(memp_memory);
-#endif /* !MEMP_SEPARATE_POOLS */
   for (i = 0; i < MEMP_MAX; ++i) {
-#if MEMP_SEPARATE_POOLS
-    p = (struct memp *)(memp_bases[i]);
-#endif /* MEMP_SEPARATE_POOLS */
+    p = p;
     for (j = 0; j < memp_num[i]; ++j) {
       memp_overflow_check_element_overflow(p, i);
       p = (struct memp*)((u8_t*)p + MEMP_SIZE + memp_sizes[i] + MEMP_SANITY_REGION_AFTER_ALIGNED);
     }
   }
-#if !MEMP_SEPARATE_POOLS
   p = (struct memp *)LWIP_MEM_ALIGN(memp_memory);
-#endif /* !MEMP_SEPARATE_POOLS */
   for (i = 0; i < MEMP_MAX; ++i) {
-#if MEMP_SEPARATE_POOLS
-    p = (struct memp *)(memp_bases[i]);
-#endif /* MEMP_SEPARATE_POOLS */
+    p = p;
     for (j = 0; j < memp_num[i]; ++j) {
       memp_overflow_check_element_underflow(p, i);
       p = (struct memp*)((u8_t*)p + MEMP_SIZE + memp_sizes[i] + MEMP_SANITY_REGION_AFTER_ALIGNED);
@@ -323,13 +310,9 @@ memp_overflow_init(void)
   struct memp *p;
   u8_t *m;
 
-#if !MEMP_SEPARATE_POOLS
   p = (struct memp *)LWIP_MEM_ALIGN(memp_memory);
-#endif /* !MEMP_SEPARATE_POOLS */
   for (i = 0; i < MEMP_MAX; ++i) {
-#if MEMP_SEPARATE_POOLS
-    p = (struct memp *)(memp_bases[i]);
-#endif /* MEMP_SEPARATE_POOLS */
+    p = p;
     for (j = 0; j < memp_num[i]; ++j) {
 #if MEMP_SANITY_REGION_BEFORE_ALIGNED > 0
       m = (u8_t*)p + MEMP_SIZE - MEMP_SANITY_REGION_BEFORE_ALIGNED;
@@ -370,7 +353,7 @@ memp_init(void)
   for (i = 0; i < MEMP_MAX; ++i) {
     memp_tab[i] = NULL;
 #if MEMP_SEPARATE_POOLS
-    memp = (struct memp*)LWIP_MEM_ALIGN(memp_bases[i]);
+    memp = (struct memp*)memp_bases[i];
 #endif /* MEMP_SEPARATE_POOLS */
     /* create a linked list of memp elements */
     for (j = 0; j < memp_num[i]; ++j) {

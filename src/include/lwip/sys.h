@@ -45,28 +45,24 @@ extern "C" {
 typedef u8_t sys_sem_t;
 typedef u8_t sys_mutex_t;
 typedef u8_t sys_mbox_t;
-
+typedef u8_t sys_prot_t;
+typedef u8_t sys_port_t;
+ 
 #define sys_sem_new(s, c) ERR_OK
 #define sys_sem_signal(s)
 #define sys_sem_wait(s)
 #define sys_arch_sem_wait(s,t)
 #define sys_sem_free(s)
-#define sys_sem_valid(s) 0
-#define sys_sem_set_invalid(s)
 #define sys_mutex_new(mu) ERR_OK
 #define sys_mutex_lock(mu)
 #define sys_mutex_unlock(mu)
 #define sys_mutex_free(mu)
-#define sys_mutex_valid(mu) 0
-#define sys_mutex_set_invalid(mu)
 #define sys_mbox_new(m, s) ERR_OK
 #define sys_mbox_fetch(m,d)
 #define sys_mbox_tryfetch(m,d)
 #define sys_mbox_post(m,d)
 #define sys_mbox_trypost(m,d)
 #define sys_mbox_free(m)
-#define sys_mbox_valid(m)
-#define sys_mbox_set_invalid(m)
 
 #define sys_thread_new(n,t,a,s,p)
 
@@ -184,7 +180,7 @@ err_t sys_mbox_trypost(sys_mbox_t *mbox, void *msg);
 /** Wait for a new message to arrive in the mbox
  * @param mbox mbox to get a message from
  * @param msg pointer where the message is stored
- * @param timeout maximum time (in milliseconds) to wait for a message (0 = wait forever)
+ * @param timeout maximum time (in milliseconds) to wait for a message
  * @return time (in milliseconds) waited for a message, may be 0 if not waited
            or SYS_ARCH_TIMEOUT on timeout
  *         The returned time has to be accurate to prevent timer jitter! */
@@ -194,6 +190,7 @@ u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout);
 /** Wait for a new message to arrive in the mbox
  * @param mbox mbox to get a message from
  * @param msg pointer where the message is stored
+ * @param timeout maximum time (in milliseconds) to wait for a message
  * @return 0 (milliseconds) if a message has been received
  *         or SYS_MBOX_EMPTY if the mailbox is empty */
 u32_t sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg);

@@ -51,8 +51,6 @@
 #include "lwip/sys.h"
 #include "netif/etharp.h"
 
-#include <string.h>
-
 /**
  * IANA assigned enterprise ID for lwIP is 26381
  * @see http://www.iana.org/assignments/enterprise-numbers
@@ -75,7 +73,7 @@
 #endif
 
 #ifndef SNMP_GET_SYSUPTIME
-#define SNMP_GET_SYSUPTIME(sysuptime)  (sysuptime = (sys_now() / 10))
+#define SNMP_GET_SYSUPTIME(sysuptime)
 #endif
 
 static void system_get_object_def(u8_t ident_len, s32_t *ident, struct obj_def *od);
@@ -765,8 +763,7 @@ const struct mib_array_node internet = {
 #endif
 
 /** mib-2.system.sysObjectID  */
-static const struct snmp_obj_id sysobjid_default = {SNMP_SYSOBJID_LEN, SNMP_SYSOBJID};
-static const struct snmp_obj_id* sysobjid_ptr = &sysobjid_default;
+static struct snmp_obj_id sysobjid = {SNMP_SYSOBJID_LEN, SNMP_SYSOBJID};
 /** enterprise ID for generic TRAPs, .iso.org.dod.internet.mgmt.mib-2.snmp */
 static struct snmp_obj_id snmpgrp_id = {7,{1,3,6,1,2,1,11}};
 /** mib-2.system.sysServices */
@@ -775,8 +772,8 @@ static const s32_t sysservices = SNMP_SYSSERVICES;
 /** mib-2.system.sysDescr */
 static const u8_t sysdescr_len_default = 4;
 static const u8_t sysdescr_default[] = "lwIP";
-static const u8_t* sysdescr_len_ptr = &sysdescr_len_default;
-static const u8_t* sysdescr_ptr = &sysdescr_default[0];
+static u8_t* sysdescr_len_ptr = (u8_t*)&sysdescr_len_default;
+static u8_t* sysdescr_ptr = (u8_t*)&sysdescr_default[0];
 /** mib-2.system.sysContact */
 static const u8_t syscontact_len_default = 0;
 static const u8_t syscontact_default[] = "";
@@ -896,13 +893,47 @@ static u32_t snmpinpkts = 0,
              snmpouttraps = 0;
 
 
+
+/* prototypes of the following functions are in lwip/src/include/lwip/snmp.h */
+/**
+ * Copy octet string.
+ *
+ * @param dst points to destination
+ * @param src points to source
+ * @param n number of octets to copy.
+ */
+static void ocstrncpy(u8_t *dst, u8_t *src, u16_t n)
+{
+  u16_t i = n;
+  while (i > 0) {
+    i--;
+    *dst++ = *src++;
+  }
+}
+
+/**
+ * Copy object identifier (s32_t) array.
+ *
+ * @param dst points to destination
+ * @param src points to source
+ * @param n number of sub identifiers to copy.
+ */
+void objectidncpy(s32_t *dst, s32_t *src, u8_t n)
+{
+  u8_t i = n;
+  while(i > 0) {
+    i--;
+    *dst++ = *src++;
+  }
+}
+
 /**
  * Initializes sysDescr pointers.
  *
  * @param str if non-NULL then copy str pointer
  * @param len points to string length, excluding zero terminator
  */
-void snmp_set_sysdescr(const u8_t *str, const u8_t *len)
+void snmp_set_sysdesr(u8_t *str, u8_t *len)
 {
   if (str != NULL)
   {
@@ -911,9 +942,9 @@ void snmp_set_sysdescr(const u8_t *str, const u8_t *len)
   }
 }
 
-void snmp_get_sysobjid_ptr(const struct snmp_obj_id **oid)
+void snmp_get_sysobjid_ptr(struct snmp_obj_id **oid)
 {
-  *oid = sysobjid_ptr;
+  *oid = &sysobjid;
 }
 
 /**
@@ -921,9 +952,9 @@ void snmp_get_sysobjid_ptr(const struct snmp_obj_id **oid)
  *
  * @param oid points to stuct snmp_obj_id to copy
  */
-void snmp_set_sysobjid(const struct snmp_obj_id *oid)
+void snmp_set_sysobjid(struct snmp_obj_id *oid)
 {
-  sysobjid_ptr = oid;
+  sysobjid = *oid;
 }
 
 /**
@@ -1766,7 +1797,7 @@ void snmp_insert_udpidx_tree(struct udp_pcb *pcb)
   u8_t level;
 
   LWIP_ASSERT("pcb != NULL", pcb != NULL);
-  snmp_iptooid(ipX_2_ip(&pcb->local_ip), &udpidx[0]);
+  snmp_iptooid(&pcb->local_ip, &udpidx[0]);
   udpidx[4] = pcb->local_port;
 
   udp_rn = &udp_root;
@@ -1819,7 +1850,7 @@ void snmp_delete_udpidx_tree(struct udp_pcb *pcb)
   u8_t bindings, fc, level, del_cnt;
 
   LWIP_ASSERT("pcb != NULL", pcb != NULL);
-  snmp_iptooid(ipX_2_ip(&pcb->local_ip), &udpidx[0]);
+  snmp_iptooid(&pcb->local_ip, &udpidx[0]);
   udpidx[4] = pcb->local_port;
 
   /* count PCBs for a given binding
@@ -1828,7 +1859,7 @@ void snmp_delete_udpidx_tree(struct udp_pcb *pcb)
   npcb = udp_pcbs;
   while ((npcb != NULL))
   {
-    if (ipX_addr_cmp(0, &npcb->local_ip, &pcb->local_ip) &&
+    if (ip_addr_cmp(&npcb->local_ip, &pcb->local_ip) &&
         (npcb->local_port == udpidx[4]))
     {
       bindings++;
@@ -2110,7 +2141,7 @@ system_get_object_def(u8_t ident_len, s32_t *ident, struct obj_def *od)
         od->instance = MIB_OBJECT_SCALAR;
         od->access = MIB_OBJECT_READ_ONLY;
         od->asn_type = (SNMP_ASN1_UNIV | SNMP_ASN1_PRIMIT | SNMP_ASN1_OBJ_ID);
-        od->v_len = sysobjid_ptr->len * sizeof(s32_t);
+        od->v_len = sysobjid.len * sizeof(s32_t);
         break;
       case 3: /* sysUpTime */
         od->instance = MIB_OBJECT_SCALAR;
@@ -2173,10 +2204,10 @@ system_get_value(struct obj_def *od, u16_t len, void *value)
   switch (id)
   {
     case 1: /* sysDescr */
-      MEMCPY(value, sysdescr_ptr, len);
+      ocstrncpy((u8_t*)value, sysdescr_ptr, len);
       break;
     case 2: /* sysObjectID */
-      MEMCPY(value, sysobjid_ptr->id, len);
+      objectidncpy((s32_t*)value, (s32_t*)sysobjid.id, (u8_t)(len / sizeof(s32_t)));
       break;
     case 3: /* sysUpTime */
       {
@@ -2184,13 +2215,13 @@ system_get_value(struct obj_def *od, u16_t len, void *value)
       }
       break;
     case 4: /* sysContact */
-      MEMCPY(value, syscontact_ptr, len);
+      ocstrncpy((u8_t*)value, syscontact_ptr, len);
       break;
     case 5: /* sysName */
-      MEMCPY(value, sysname_ptr, len);
+      ocstrncpy((u8_t*)value, sysname_ptr, len);
       break;
     case 6: /* sysLocation */
-      MEMCPY(value, syslocation_ptr, len);
+      ocstrncpy((u8_t*)value, syslocation_ptr, len);
       break;
     case 7: /* sysServices */
       {
@@ -2248,15 +2279,15 @@ system_set_value(struct obj_def *od, u16_t len, void *value)
   switch (id)
   {
     case 4: /* sysContact */
-      MEMCPY(syscontact_ptr, value, len);
+      ocstrncpy(syscontact_ptr, (u8_t*)value, len);
       *syscontact_len_ptr = (u8_t)len;
       break;
     case 5: /* sysName */
-      MEMCPY(sysname_ptr, value, len);
+      ocstrncpy(sysname_ptr, (u8_t*)value, len);
       *sysname_len_ptr = (u8_t)len;
       break;
     case 6: /* sysLocation */
-      MEMCPY(syslocation_ptr, value, len);
+      ocstrncpy(syslocation_ptr, (u8_t*)value, len);
       *syslocation_len_ptr = (u8_t)len;
       break;
   };
@@ -2444,7 +2475,7 @@ ifentry_get_value(struct obj_def *od, u16_t len, void *value)
       }
       break;
     case 2: /* ifDescr */
-      MEMCPY(value, netif->name, len);
+      ocstrncpy((u8_t*)value, (u8_t*)netif->name, len);
       break;
     case 3: /* ifType */
       {
@@ -2465,7 +2496,7 @@ ifentry_get_value(struct obj_def *od, u16_t len, void *value)
       }
       break;
     case 6: /* ifPhysAddress */
-      MEMCPY(value, netif->hwaddr, len);
+      ocstrncpy((u8_t*)value, netif->hwaddr, len);
       break;
     case 7: /* ifAdminStatus */
       {
@@ -2577,7 +2608,7 @@ ifentry_get_value(struct obj_def *od, u16_t len, void *value)
       }
       break;
     case 22: /* ifSpecific */
-      MEMCPY(value, ifspecific.id, len);
+      objectidncpy((s32_t*)value, (s32_t*)ifspecific.id, (u8_t)(len / sizeof(s32_t)));
       break;
   };
 }
@@ -3321,7 +3352,7 @@ ip_rteentry_get_value(struct obj_def *od, u16_t len, void *value)
         }
         break;
       case 13: /* ipRouteInfo */
-        MEMCPY(value, iprouteinfo.id, len);
+        objectidncpy((s32_t*)value, (s32_t*)iprouteinfo.id, (u8_t)(len / sizeof(s32_t)));
         break;
     }
   }
@@ -3850,17 +3881,17 @@ udpentry_get_value(struct obj_def *od, u16_t len, void *value)
 {
   u8_t id;
   struct udp_pcb *pcb;
-  ipX_addr_t ip;
+  ip_addr_t ip;
   u16_t port;
 
   LWIP_UNUSED_ARG(len);
-  snmp_oidtoip(&od->id_inst_ptr[1], (ip_addr_t*)&ip);
+  snmp_oidtoip(&od->id_inst_ptr[1], &ip);
   LWIP_ASSERT("invalid port", (od->id_inst_ptr[5] >= 0) && (od->id_inst_ptr[5] <= 0xffff));
   port = (u16_t)od->id_inst_ptr[5];
 
   pcb = udp_pcbs;
   while ((pcb != NULL) &&
-         !(ipX_addr_cmp(0, &pcb->local_ip, &ip) &&
+         !(ip_addr_cmp(&pcb->local_ip, &ip) &&
            (pcb->local_port == port)))
   {
     pcb = pcb->next;
@@ -3874,8 +3905,8 @@ udpentry_get_value(struct obj_def *od, u16_t len, void *value)
     {
       case 1: /* udpLocalAddress */
         {
-          ipX_addr_t *dst = (ipX_addr_t*)value;
-          ipX_addr_copy(0, *dst, pcb->local_ip);
+          ip_addr_t *dst = (ip_addr_t*)value;
+          *dst = pcb->local_ip;
         }
         break;
       case 2: /* udpLocalPort */

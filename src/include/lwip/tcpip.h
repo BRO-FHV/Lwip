@@ -59,75 +59,31 @@ extern "C" {
 extern sys_mutex_t lock_tcpip_core;
 #define LOCK_TCPIP_CORE()     sys_mutex_lock(&lock_tcpip_core)
 #define UNLOCK_TCPIP_CORE()   sys_mutex_unlock(&lock_tcpip_core)
-#ifdef LWIP_DEBUG
-#define TCIP_APIMSG_SET_ERR(m, e) (m)->msg.err = e  /* catch functions that don't set err */
-#else
-#define TCIP_APIMSG_SET_ERR(m, e)
-#endif
-#define TCPIP_APIMSG_NOERR(m,f) do { \
-  TCIP_APIMSG_SET_ERR(m, ERR_VAL); \
-  LOCK_TCPIP_CORE(); \
-  f(&((m)->msg)); \
-  UNLOCK_TCPIP_CORE(); \
-} while(0)
-#define TCPIP_APIMSG(m,f,e)   do { \
-  TCPIP_APIMSG_NOERR(m,f); \
-  (e) = (m)->msg.err; \
-} while(0)
+#define TCPIP_APIMSG(m)       tcpip_apimsg_lock(m)
 #define TCPIP_APIMSG_ACK(m)
 #define TCPIP_NETIFAPI(m)     tcpip_netifapi_lock(m)
 #define TCPIP_NETIFAPI_ACK(m)
 #else /* LWIP_TCPIP_CORE_LOCKING */
 #define LOCK_TCPIP_CORE()
 #define UNLOCK_TCPIP_CORE()
-#define TCPIP_APIMSG_NOERR(m,f) do { (m)->function = f; tcpip_apimsg(m); } while(0)
-#define TCPIP_APIMSG(m,f,e)   do { (m)->function = f; (e) = tcpip_apimsg(m); } while(0)
+#define TCPIP_APIMSG(m)       tcpip_apimsg(m)
 #define TCPIP_APIMSG_ACK(m)   sys_sem_signal(&m->conn->op_completed)
 #define TCPIP_NETIFAPI(m)     tcpip_netifapi(m)
 #define TCPIP_NETIFAPI_ACK(m) sys_sem_signal(&m->sem)
 #endif /* LWIP_TCPIP_CORE_LOCKING */
-
-
-#if LWIP_MPU_COMPATIBLE
-#define API_VAR_REF(name)               (*(name))
-#define API_VAR_DECLARE(type, name)     type * name
-#define API_VAR_ALLOC(type, pool, name) do { \
-                                          name = (type *)memp_malloc(pool); \
-                                          if (name == NULL) { \
-                                            return ERR_MEM; \
-                                          } \
-                                        } while(0)
-#define API_VAR_ALLOC_DONTFAIL(type, pool, name) do { \
-                                          name = (type *)memp_malloc(pool); \
-                                          LWIP_ASSERT("pool empty", name != NULL); \
-                                        } while(0)
-#define API_VAR_FREE(pool, name)        memp_free(pool, name)
-#define API_EXPR_REF(expr)              &(expr)
-#define API_EXPR_DEREF(expr)            expr
-#else /* LWIP_MPU_COMPATIBLE */
-#define API_VAR_REF(name)               name
-#define API_VAR_DECLARE(type, name)     type name
-#define API_VAR_ALLOC(type, pool, name)
-#define API_VAR_ALLOC_DONTFAIL(type, pool, name)
-#define API_VAR_FREE(pool, name)
-#define API_EXPR_REF(expr)              expr
-#define API_EXPR_DEREF(expr)            *(expr)
-#endif /* LWIP_MPU_COMPATIBLE */
-
-
 
 /** Function prototype for the init_done function passed to tcpip_init */
 typedef void (*tcpip_init_done_fn)(void *arg);
 /** Function prototype for functions passed to tcpip_callback() */
 typedef void (*tcpip_callback_fn)(void *ctx);
 
-/* Forward declarations */
-struct tcpip_callback_msg;
-
 void tcpip_init(tcpip_init_done_fn tcpip_init_done, void *arg);
 
 #if LWIP_NETCONN
 err_t tcpip_apimsg(struct api_msg *apimsg);
+#if LWIP_TCPIP_CORE_LOCKING
+err_t tcpip_apimsg_lock(struct api_msg *apimsg);
+#endif /* LWIP_TCPIP_CORE_LOCKING */
 #endif /* LWIP_NETCONN */
 
 err_t tcpip_input(struct pbuf *p, struct netif *inp);
@@ -141,10 +97,6 @@ err_t tcpip_netifapi_lock(struct netifapi_msg *netifapimsg);
 
 err_t tcpip_callback_with_block(tcpip_callback_fn function, void *ctx, u8_t block);
 #define tcpip_callback(f, ctx)              tcpip_callback_with_block(f, ctx, 1)
-
-struct tcpip_callback_msg* tcpip_callbackmsg_new(tcpip_callback_fn function, void *ctx);
-void   tcpip_callbackmsg_delete(struct tcpip_callback_msg* msg);
-err_t  tcpip_trycallback(struct tcpip_callback_msg* msg);
 
 /* free pbufs or heap memory from another context without blocking */
 err_t pbuf_free_callback(struct pbuf *p);
@@ -167,8 +119,7 @@ enum tcpip_msg_type {
   TCPIP_MSG_TIMEOUT,
   TCPIP_MSG_UNTIMEOUT,
 #endif /* LWIP_TCPIP_TIMEOUT */
-  TCPIP_MSG_CALLBACK,
-  TCPIP_MSG_CALLBACK_STATIC
+  TCPIP_MSG_CALLBACK
 };
 
 struct tcpip_msg {
