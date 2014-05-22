@@ -7,23 +7,36 @@
  * TODO
  */
 
-#ifndef LWIPOPTS_H_
-#define LWIPOPTS_H_
+#ifndef __LWIPOPTS_H__
+#define __LWIPOPTS_H__
 
 /*****************************************************************************
 **                           CONFIGURATIONS
 *****************************************************************************/
+
 /*
-** The timeout for DHCP completion. lwIP library will wait for DHCP
-** completion for (LWIP_DHCP_TIMEOUT / 100) seconds.
+** The macro CPSW_DUAL_MAC_MODE shall be defined for using CPSW ports in
+** Dual MAC mode.
 */
-#define LWIP_DHCP_TIMEOUT               500
+#define CPSW_DUAL_MAC_MODE
+
+/*
+** The below macro should be defined for using lwIP with cache. For cache
+** enabling, pbuf pool shall be cache line aligned. This is done by using
+** separate pool for each memory. The alignment of pbuf pool to cache line
+** size is done in /ports/cpsw/include/arch/cc.h.
+*/
+//TODO Stefan: enable if can be MMU configured
+//#define LWIP_CACHE_ENABLED
+
+#define SOC_CACHELINE_SIZE_BYTES        64            /* Number of bytes in
+                                                         a cache line */
 
 /*
 ** The number of times DHCP is attempted. Each time, the library will wait
 ** for (LWIP_DHCP_TIMEOUT / 100) seconds for DHCP completion.
 */
-#define NUM_DHCP_TRIES                  5
+#define NUM_DHCP_TRIES                  10
 
 /*****************************************************************************
 **            lwIP SPECIFIC DEFINITIONS - To be used by lwIP stack
@@ -34,7 +47,7 @@
 /*****************************************************************************
 **                    Platform specific locking
 *****************************************************************************/
-#define SYS_LIGHTWEIGHT_PROT            1
+#define SYS_LIGHTWEIGHT_PROT            0
 #define NO_SYS                          1
 #define NO_SYS_NO_TIMERS                1
 
@@ -47,6 +60,8 @@
 #define MEMP_NUM_PBUF                   96
 #define MEMP_NUM_TCP_PCB                32
 #define PBUF_POOL_SIZE                  210
+
+//#define LWIP_CACHE_ENABLED
 
 #ifdef LWIP_CACHE_ENABLED
 #define MEMP_SEPARATE_POOLS             1            /* We want the pbuf
@@ -63,8 +78,13 @@
 /*****************************************************************************
 **                           DHCP Options
 *****************************************************************************/
-#define LWIP_DHCP                       1
-#define DHCP_DOES_ARP_CHECK             0
+#define LWIP_DHCP                       1	//enable DHCP
+#define DHCP_DOES_ARP_CHECK             1
+/*
+** The timeout for DHCP completion. lwIP library will wait for DHCP
+** completion for (LWIP_DHCP_TIMEOUT / 100) seconds.
+*/
+#define LWIP_DHCP_TIMEOUT               500
 
 /*****************************************************************************
 **                           Auto IP  Options
@@ -102,4 +122,4 @@
 #define LWIP_DBG_TYPES_ON               (LWIP_DBG_ON | LWIP_DBG_TRACE \
                                          |LWIP_DBG_STATE | LWIP_DBG_FRESH)
 
-#endif /* LWIPOPTS_H_ */
+#endif /* __LWIPOPTS_H__ */
