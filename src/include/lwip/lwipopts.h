@@ -45,7 +45,7 @@
 /*****************************************************************************
 **                    Platform specific locking
 *****************************************************************************/
-#define SYS_LIGHTWEIGHT_PROT            0
+#define SYS_LIGHTWEIGHT_PROT            1
 #define NO_SYS                          1
 #define NO_SYS_NO_TIMERS                1
 
