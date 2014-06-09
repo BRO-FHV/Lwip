@@ -26,8 +26,6 @@
 ** separate pool for each memory. The alignment of pbuf pool to cache line
 ** size is done in /ports/cpsw/include/arch/cc.h.
 */
-//TODO Stefan: enable if can be MMU configured
-//#define LWIP_CACHE_ENABLED
 
 #define SOC_CACHELINE_SIZE_BYTES        64            /* Number of bytes in
                                                          a cache line */
@@ -54,12 +52,24 @@
 /*****************************************************************************
 **                          Memory Options
 *****************************************************************************/
+/**
+ * MEM_ALIGNMENT: should be set to the alignment of the CPU
+ *    4 byte alignment -> #define MEM_ALIGNMENT 4
+ *    2 byte alignment -> #define MEM_ALIGNMENT 2
+ */
 #define MEM_ALIGNMENT                   4
+/**
+ * MEM_SIZE: the size of the heap memory. If the application will send
+ * a lot of data that needs to be copied, this should be set high.
+ */
 #define MEM_SIZE                        (128 * 1024) /* 128K */
 
 #define MEMP_NUM_PBUF                   96
 #define MEMP_NUM_TCP_PCB                32
 #define PBUF_POOL_SIZE                  210
+
+#define MEM_LIBC_MALLOC                 1
+#define MEMP_MEM_MALLOC                 1
 
 //#define LWIP_CACHE_ENABLED
 
@@ -121,5 +131,4 @@
 #define LWIP_DBG_MIN_LEVEL              LWIP_DBG_LEVEL_OFF
 #define LWIP_DBG_TYPES_ON               (LWIP_DBG_ON | LWIP_DBG_TRACE \
                                          |LWIP_DBG_STATE | LWIP_DBG_FRESH)
-
 #endif /* __LWIPOPTS_H__ */

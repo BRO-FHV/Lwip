@@ -305,7 +305,6 @@ ip_input(struct pbuf *p, struct netif *inp)
     return ERR_OK;
   }
 #endif
-
   /* Trim pbuf. This should have been done at the netif layer,
    * but we'll do it anyway just to be sure that its done. */
   pbuf_realloc(p, iphdr_len);
