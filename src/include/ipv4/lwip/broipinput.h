@@ -10,6 +10,7 @@
 #ifndef IPINPUT_H_
 #define IPINPUT_H_
 
+#include <inttypes.h>
 #include "lwip/netif.h"
 
 #define IP_ADDR_LENGTH		4
@@ -27,7 +28,7 @@ typedef struct {
 	uint8_t destMacAddr[MAC_ADDR_LENGTH];
 	uint8_t srcMacAddr[MAC_ADDR_LENGTH];
 	uint8_t type[TYPE_LENGTH];
-} eth_header;
+} eth_header_t;
 
 
 typedef struct {
@@ -44,7 +45,7 @@ typedef struct {
 	uint16_t checksum;
 	uint8_t srcIp[IP_ADDR_LENGTH];
 	uint8_t destIp[IP_ADDR_LENGTH];
-} ip_header;
+} ip_header_t;
 
 typedef struct {
 	uint8_t ethHeader[14];
@@ -59,11 +60,14 @@ typedef struct {
 	uint8_t data2;
 
 	uint8_t dataRestStart;
-} udp_header;
+} udp_header_t;
 
 
-extern void bro_udp_input(eth_header* ethHeader, ip_header* ipHeader, udp_header* udp_header, uint8_t* data, uint32_t dataLen);
+extern void broUdpInput(eth_header_t* ethHeader, ip_header_t* ipHeader, udp_header_t* udp_header, uint8_t data[], uint32_t dataLen);
 
-err_t bro_ip_input(struct pbuf *p, struct netif *inp);
+err_t broIpInput(struct pbuf *p, struct netif *inp);
+
+uint16_t convertBigToLittleEndian(uint8_t data[]);
+uint32_t ipToInt(uint8_t data[]);
 
 #endif /* IPINPUT_H_ */
