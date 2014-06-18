@@ -55,6 +55,7 @@
 #include "lwip/dhcp.h"
 #include "lwip/autoip.h"
 #include "netif/etharp.h"
+#include "lwip/broipinput.h"
 
 #if PPPOE_SUPPORT
 #include "netif/ppp_oe.h"
@@ -643,7 +644,7 @@ etharp_ip_input(struct netif *netif, struct pbuf *p)
 
   LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE, ("etharp_ip_input: updating ETHARP table.\n"));
   /* update the source IP address in the cache, if present */
-  /* @todo We could use ETHARP_FLAG_TRY_HARD if we think we are going to talk
+  /* We could use ETHARP_FLAG_TRY_HARD if we think we are going to talk
    * back soon (for example, if the destination IP address is ours. */
   update_arp_entry(netif, &iphdr_src, &(ethhdr->src), ETHARP_FLAG_FIND_ONLY);
 }
@@ -801,8 +802,7 @@ etharp_arp_input(struct netif *netif, struct eth_addr *ethaddr, struct pbuf *p)
 #if (LWIP_DHCP && DHCP_DOES_ARP_CHECK)
     /* DHCP wants to know about ARP replies from any host with an
      * IP address also offered to us by the DHCP server. We do not
-     * want to take a duplicate IP address on a single network.
-     * @todo How should we handle redundant (fail-over) interfaces? */
+     * want to take a duplicate IP address on a single network. */
     dhcp_arp_reply(netif, &sipaddr);
 #endif /* (LWIP_DHCP && DHCP_DOES_ARP_CHECK) */
     break;
@@ -1273,14 +1273,7 @@ ethernet_input(struct pbuf *p, struct netif *netif)
       /* update ARP table */
       etharp_ip_input(netif, p);
 #endif /* ETHARP_TRUST_IP_MAC */
-      /* skip Ethernet header */
-      if(pbuf_header(p, -ip_hdr_offset)) {
-        LWIP_ASSERT("Can't move over header in packet", 0);
-        goto free_and_return;
-      } else {
-        /* pass to IP layer */
-        ip_input(p, netif);
-      }
+      BroIpInput(p, netif);
       break;
       
     case PP_HTONS(ETHTYPE_ARP):
