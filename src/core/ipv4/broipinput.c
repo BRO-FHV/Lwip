@@ -7,7 +7,6 @@
  * TODO
  */
 
-#include <Syscall/lib_syscall.h>
 #include <inttypes.h>
 #include <string.h>
 #include "lwip/broipinput.h"
