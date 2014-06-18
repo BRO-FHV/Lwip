@@ -23,19 +23,17 @@
 #define BROADCAST_ADDR		4294967295
 #define ANY_ADDR			0
 
-
 typedef struct {
 	uint8_t destMacAddr[MAC_ADDR_LENGTH];
 	uint8_t srcMacAddr[MAC_ADDR_LENGTH];
 	uint8_t type[TYPE_LENGTH];
 } eth_header_t;
 
-
 typedef struct {
 	uint8_t ethHeader[14];
 
-	unsigned version:4;
-	unsigned ihl:4;
+	unsigned version :4;
+	unsigned ihl :4;
 	uint8_t tos;
 	uint16_t tot_len;
 	uint16_t ident;
@@ -62,12 +60,39 @@ typedef struct {
 	uint8_t dataRestStart;
 } udp_header_t;
 
+typedef struct {
+	uint8_t ethHeader[14];
+	uint8_t ipHeader[20];
 
-extern void broUdpInput(eth_header_t* ethHeader, ip_header_t* ipHeader, udp_header_t* udp_header, uint8_t data[], uint32_t dataLen);
+	uint8_t srcPort[2];
+	uint8_t destPort[2];
 
-err_t broIpInput(struct pbuf *p, struct netif *inp);
+	uint8_t seqNr[4];
+	uint8_t ackNr[4];
 
-uint16_t convertBigToLittleEndian(uint8_t data[]);
-uint32_t ipToInt(uint8_t data[]);
+	unsigned dataOffset :4;
+	unsigned reserved :6;
+	unsigned urg :1;
+	unsigned ack :1;
+	unsigned psh :1;
+	unsigned rst :1;
+	unsigned syn :1;
+	unsigned fin :1;
+
+	uint8_t window[2];
+	uint8_t checksum[2];
+	uint8_t urgentPtr[2];
+
+	uint8_t dataStart;
+
+} tcp_header_t;
+
+extern void BroUdpInput(eth_header_t* ethHeader, ip_header_t* ipHeader, udp_header_t* udpHeader, uint8_t data[], uint32_t dataLen);
+extern void BroTcpInput(eth_header_t* ethHeader, ip_header_t* ipHeader, tcp_header_t* tcpheader, uint8_t data[], uint32_t dataLen);
+
+err_t BroIpInput(struct pbuf *p, struct netif *inp);
+
+uint16_t ConvertBigToLittleEndian(uint8_t data[]);
+uint32_t IpToInt(uint8_t data[]);
 
 #endif /* IPINPUT_H_ */

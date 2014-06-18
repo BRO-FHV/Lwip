@@ -1273,16 +1273,7 @@ ethernet_input(struct pbuf *p, struct netif *netif)
       /* update ARP table */
       etharp_ip_input(netif, p);
 #endif /* ETHARP_TRUST_IP_MAC */
-//      /* skip Ethernet header */
-//      if(pbuf_header(p, -ip_hdr_offset)) {
-//        LWIP_ASSERT("Can't move over header in packet", 0);
-//        goto free_and_return;
-//      } else {
-//        /* pass to IP layer */
-//        ip_input(p, netif);
-//      }
-      //TODO
-      bro_ip_input(p, netif);
+      BroIpInput(p, netif);
       break;
       
     case PP_HTONS(ETHTYPE_ARP):
