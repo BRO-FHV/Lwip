@@ -21,19 +21,17 @@
 uint8_t udpData[UDP_MAX_DATA];
 uint8_t tcpData[TCP_MAX_DATA];
 
-uint32_t isIPType(eth_header_t* header);
-uint16_t convertBigToLittleEndian(uint8_t data[]);
-uint32_t ipToInt(uint8_t data[]);
-uint32_t isPacketForUs(ip_header_t* header, struct netif *inp);
+uint32_t IsIPType(eth_header_t* header);
+uint32_t IsPacketForUs(ip_header_t* header, struct netif *inp);
 
 err_t BroIpInput(struct pbuf *p, struct netif *inp) {
 	eth_header_t* ethHeader = (eth_header_t*) p->payload;
 
-	if (isIPType(ethHeader)) {
+	if (IsIPType(ethHeader)) {
 		ip_header_t* ipHeader = (ip_header_t*) ethHeader;
 
 		//check if packet is for us and if packet is a UDP packet
-		if (isPacketForUs(ipHeader, inp)) {
+		if (IsPacketForUs(ipHeader, inp)) {
 			if (UDP_PROT == ipHeader->protocol) {
 				udp_header_t* udpHeader = (udp_header_t*) ipHeader;
 
@@ -47,7 +45,7 @@ err_t BroIpInput(struct pbuf *p, struct netif *inp) {
 				//copy rest of data aligned
 				//-8 because udpHeader->len is data header + data
 				//we are just interesed in data
-				uint32_t dataLen = convertBigToLittleEndian(udpHeader->len) - 8;
+				uint32_t dataLen = ConvertBigToLittleEndian(udpHeader->len) - 8;
 				memcpy(&udpData[2], &udpHeader->dataRestStart, dataLen - 2);
 
 				BroUdpInput(ethHeader, ipHeader, udpHeader, udpData, dataLen);
@@ -60,20 +58,20 @@ err_t BroIpInput(struct pbuf *p, struct netif *inp) {
 	return ERR_OK;
 }
 
-uint32_t isIPType(eth_header_t* header) {
+uint32_t IsIPType(eth_header_t* header) {
 	return header->type[0] == 0x08 && header->type[1] == 0x00;
 }
 
-uint16_t convertBigToLittleEndian(uint8_t data[]) {
+uint16_t ConvertBigToLittleEndian(uint8_t data[]) {
 	return data[1] + (data[0] << 8);
 }
 
-uint32_t ipToInt(uint8_t data[]) {
+uint32_t IpToInt(uint8_t data[]) {
 	return data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24);
 }
 
-uint32_t isPacketForUs(ip_header_t* header, struct netif *inp) {
-	uint32_t dest = ipToInt(header->destIp);
+uint32_t IsPacketForUs(ip_header_t* header, struct netif *inp) {
+	uint32_t dest = IpToInt(header->destIp);
 
 	return BROADCAST_ADDR == dest || ANY_ADDR == dest
 			|| ((ip_addr_t) inp->ip_addr).addr == dest;
