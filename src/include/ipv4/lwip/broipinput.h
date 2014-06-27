@@ -70,21 +70,14 @@ typedef struct {
 	uint8_t seqNr[4];
 	uint8_t ackNr[4];
 
-	unsigned dataOffset :4;
-	unsigned reserved :6;
-	unsigned urg :1;
-	unsigned ack :1;
-	unsigned psh :1;
-	unsigned rst :1;
-	unsigned syn :1;
-	unsigned fin :1;
+	uint8_t dataOffset; //data offset = 4 bit + 4 bit reserved
+	uint8_t controlFlags; //first 2 bit reserved, rest control flags
 
 	uint8_t window[2];
 	uint8_t checksum[2];
 	uint8_t urgentPtr[2];
 
 	uint8_t dataStart;
-
 } tcp_header_t;
 
 extern void BroUdpInput(eth_header_t* ethHeader, ip_header_t* ipHeader, udp_header_t* udpHeader, uint8_t data[], uint32_t dataLen);

@@ -50,6 +50,7 @@ err_t BroIpInput(struct pbuf *p, struct netif *inp) {
 				BroUdpInput(ethHeader, ipHeader, udpHeader, udpData, dataLen);
 			} else if (TCP_PROT == ipHeader->protocol) {
 				tcp_header_t* tcpHeader = (tcp_header_t*) ipHeader;
+				printf("tcp packet received - need to impl\n");
 			}
 		}
 	}
